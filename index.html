@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Decision Dashboard</title>
+    <meta name="description" content="Pricing simulator with elasticity, break-even and Monte Carlo risk analysis.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2.11.8"></script>
+    <script src="https://unpkg.com/tippy.js@6.3.7"></script>
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/animations/scale.css" />
+    <link rel="stylesheet" href="https://unpkg.com/tippy.js@6.3.7/themes/light-border.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-annotation/2.2.1/chartjs-plugin-annotation.min.js"></script>
+</head>
+<body>
+    <div class="container dashboard-container">
+        <header>
+            <div class="header-top">
+                <div class="header-titles">
+                    <h1>Financial Decision Dashboard</h1>
+                    <p>Analyze your pricing strategy and maximize profits</p>
+                </div>
+                <div class="theme-toggle">
+                    <label class="switch">
+                        <input type="checkbox" id="theme-switch">
+                        <span class="slider round">
+                            <span class="icon sun-icon">☀️</span>
+                            <span class="icon moon-icon">🌙</span>
+                        </span>
+                    </label>
+                    <span id="theme-label">Light Mode</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Left Column: Controls -->
+            <div class="controls-column card">
+                <h2>Simulation Controls</h2>
+
+                <div class="input-group">
+                    <label for="currency-select">Currency</label>
+                    <select id="currency-select" class="currency-dropdown">
+                        <option value="$">USD ($)</option>
+                        <option value="£">GBP (£)</option>
+                        <option value="€">EUR (€)</option>
+                        <option value="RM">MYR (RM)</option>
+                    </select>
+                </div>
+                
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="fixed-costs">Fixed Costs</label>
+                        <input type="number" id="fixed-costs" name="fixed-costs" placeholder="e.g., 5000" min="0" step="0.01" required>
+                        <span class="error-text hidden" id="error-fixed-costs">Fixed costs cannot be negative or empty.</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="variable-costs">Variable Costs (per unit)</label>
+                        <input type="number" id="variable-costs" name="variable-costs" placeholder="e.g., 10" min="0" step="0.01" required>
+                        <span class="error-text hidden" id="error-variable-costs">Variable costs cannot be negative or empty.</span>
+                    </div>
+                </div>
+
+                <div class="input-row">
+                    <div class="input-group">
+                        <label for="selling-price">Current Selling Price</label>
+                        <input type="number" id="selling-price" name="selling-price" placeholder="e.g., 25" min="0.01" step="0.01" required>
+                        <span class="error-text hidden" id="error-selling-price">Price must be greater than zero.</span>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="units-sold">Current Units Sold</label>
+                        <input type="number" id="units-sold" name="units-sold" placeholder="e.g., 1000" min="0" step="1" required>
+                        <span class="error-text hidden" id="error-units-sold">Units sold cannot be negative or empty.</span>
+                    </div>
+                </div>
+
+                <button id="calculate-btn" class="btn-primary calculate-baseline-btn">Calculate Baseline Profit</button>
+
+                <div id="simulation-controls" class="hidden">
+                    <hr class="divider">
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="ped">
+                                Est. Price Elasticity (PED)
+                                <span class="info-icon" tabindex="0" data-tippy-content="PED measures the responsiveness of quantity demanded to a change in price. Values < -1 indicate elastic demand.">ⓘ</span>
+                            </label>
+                            <input type="number" id="ped" name="ped" value="-1.5" step="0.1" required>
+                        </div>
+                        
+                        <div class="input-group">
+                            <label for="xed">
+                                Cross-Price Elasticity (XED)
+                                <span class="info-icon" tabindex="0" data-tippy-content="Measures response in demand to a competitor's price change.">ⓘ</span>
+                            </label>
+                            <input type="number" id="xed" name="xed" value="0.5" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="input-row">
+                        <div class="input-group">
+                            <label for="comp-price-change">Competitor Price Change (%)</label>
+                            <input type="number" id="comp-price-change" name="comp-price-change" value="0" step="1">
+                        </div>
+                        
+                        <div class="input-group">
+                            <label>Demand Curve Type</label>
+                            <select id="demand-curve-type" class="currency-dropdown">
+                                <option value="linear">Linear Demand</option>
+                                <option value="constant">Constant Elasticity</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="volume-discounts">
+                            Enable Volume Discounts
+                        </label>
+                        <small class="text-muted">Variable costs drop 2% for every 10% volume increase.</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="price-change">Proposed Price Change (%)</label>
+                        <div class="slider-container">
+                            <input type="range" id="price-change" name="price-change" min="-99" max="100" value="0" step="1">
+                            <span id="price-change-display">0%</span>
+                        </div>
+                    </div>
+
+                    <button id="maximize-btn" class="btn-secondary">Auto-Maximize Profit <span class="shortcut-badge">[Alt+M]</span></button>
+                    <button id="save-scenario-btn" class="btn-secondary mt-4">Save Current Scenario <span class="shortcut-badge">[Alt+S]</span></button>
+                </div>
+            </div>
+
+            <!-- Right Column: Insights -->
+            <div class="insights-column card hidden" id="insights-section">
+                <h2>Financial Insights</h2>
+                
+                <div class="chart-container">
+                    <canvas id="profitChart"></canvas>
+                </div>
+
+                <h3>
+                    Key Performance Indicators
+                    <span class="info-icon" tabindex="0" data-tippy-content="Break-Even Volume = Fixed Costs / (Price - Variable Costs). Shows how many units you must sell to cover all costs.">ⓘ</span>
+                </h3>
+                <div class="kpi-grid" id="kpi-container">
+                    <!-- KPIs populated by JS -->
+                </div>
+
+                <div class="monte-carlo-section mt-4">
+                    <h3>Monte Carlo Risk Simulator</h3>
+                    <p class="text-muted mb-4">Runs 1,000 simulations with ±20% variance on PED.</p>
+                    <button id="run-monte-carlo-btn" class="btn-dark-outline">Run Risk Analysis</button>
+                    <div id="monte-carlo-results" class="hidden mt-4 kpi-grid">
+                        <div class="kpi-card">
+                            <h4>5th Percentile (Downside)</h4>
+                            <p id="mc-worst" class="profit-negative">-</p>
+                        </div>
+                        <div class="kpi-card">
+                            <h4>Median Profit</h4>
+                            <p id="mc-expected">-</p>
+                        </div>
+                        <div class="kpi-card">
+                            <h4>95th Percentile (Upside)</h4>
+                            <p id="mc-best" class="profit-positive">-</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Full-width section below the dashboard grid -->
+        <section class="scenario-history-section card hidden" id="scenario-history-section">
+            <div class="history-header">
+                <h2>Scenario History</h2>
+                <div class="history-actions flex-wrap-gap">
+                    <button id="compare-btn" class="btn-dark-outline">Compare Selected</button>
+                    <button id="clear-history-btn" class="btn-dark-outline">Clear History</button>
+                    <button id="export-csv-btn" class="btn-dark-outline">Export Data</button>
+                    <button id="export-pdf-btn" class="btn-dark-outline">Export PDF</button>
+                </div>
+            </div>
+            
+            <div class="table-container">
+                <table id="scenario-table">
+                    <thead>
+                        <tr>
+                            <th>Select</th>
+                            <th>Timestamp</th>
+                            <th>PED</th>
+                            <th>Price Change (%)</th>
+                            <th>New Price</th>
+                            <th>Volume</th>
+                            <th>Gross Margin (%)</th>
+                            <th>Projected Profit</th>
+                            <th>Settings</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="scenario-table-body">
+                        <!-- Rows populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
